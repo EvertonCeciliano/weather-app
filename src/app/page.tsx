@@ -1,101 +1,182 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { MapPinIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { WeatherData, ForecastData } from '@/types/weather';
+import { getBackgroundGradient } from '@/utils/weather';
+import { SearchBar } from '@/components/SearchBar';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
+import { WeatherCard } from '@/components/WeatherCard';
+import { WeatherDetails } from '@/components/WeatherDetails';
+import { Forecast } from '@/components/Forecast';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [city, setCity] = useState('São Paulo');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<ForecastData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+          fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.error('Erro ao obter localização:', error);
+          setError('Não foi possível obter sua localização. Por favor, digite o nome da sua cidade.');
+          fetchWeather();
+        }
+      );
+    } else {
+      setError('Seu navegador não suporta geolocalização. Por favor, digite o nome da sua cidade.');
+      fetchWeather();
+    }
+  };
+
+  const fetchWeatherByCoords = async (lat: number, lon: number) => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('API key não encontrada');
+      }
+
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt_br`;
+      const weatherResponse = await axios.get(weatherUrl);
+      setWeather(weatherResponse.data);
+      setCity(weatherResponse.data.name);
+
+      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt_br`;
+      const forecastResponse = await axios.get(forecastUrl);
+      setForecast(forecastResponse.data);
+    } catch (err) {
+      console.error('Erro ao buscar clima:', err);
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          setError('Ops! Parece que estamos com um problema técnico. Por favor, tente novamente mais tarde.');
+        } else if (err.response?.status === 404) {
+          setError('Não encontramos essa cidade. Verifique se o nome está correto e tente novamente.');
+        } else {
+          setError('Algo deu errado ao buscar o clima. Por favor, tente novamente.');
+        }
+      } else {
+        setError('Não foi possível buscar o clima no momento. Por favor, tente novamente.');
+      }
+      setWeather(null);
+      setForecast(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWeather = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('API key não encontrada');
+      }
+
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric&lang=pt_br`;
+      const weatherResponse = await axios.get(weatherUrl);
+      setWeather(weatherResponse.data);
+
+      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric&lang=pt_br`;
+      const forecastResponse = await axios.get(forecastUrl);
+      setForecast(forecastResponse.data);
+    } catch (err) {
+      console.error('Erro ao buscar clima:', err);
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          setError('Ops! Parece que estamos com um problema técnico. Por favor, tente novamente mais tarde.');
+        } else if (err.response?.status === 404) {
+          setError('Não encontramos essa cidade. Verifique se o nome está correto e tente novamente.');
+        } else {
+          setError('Algo deu errado ao buscar o clima. Por favor, tente novamente.');
+        }
+      } else {
+        setError('Não foi possível buscar o clima no momento. Por favor, tente novamente.');
+      }
+      setWeather(null);
+      setForecast(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getLocation();
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchWeather();
+  };
+
+  return (
+    <motion.main 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={`min-h-screen bg-gradient-to-b ${getBackgroundGradient(weather)} text-white transition-colors duration-1000`}
+    >
+      <div className="container mx-auto px-4 py-8">
+        <SearchBar
+          city={city}
+          onCityChange={setCity}
+          onSubmit={handleSubmit}
+          onLocationClick={(e) => {
+            e.preventDefault();
+            getLocation();
+          }}
+        />
+
+        {loading ? (
+          <LoadingSpinner />
+        ) : error ? (
+          <ErrorMessage message={error} />
+        ) : weather ? (
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-2xl mx-auto"
+            >
+              <div className="text-center mb-8">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <MapPinIcon className="w-5 h-5" />
+                  <h1 className="text-4xl font-bold">{weather.name}</h1>
+                </div>
+                <p className="text-xl text-white/80">
+                  {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+                </p>
+              </div>
+
+              <WeatherCard weather={weather} />
+              <WeatherDetails weather={weather} />
+              {forecast && <Forecast forecast={forecast} />}
+            </motion.div>
+          </AnimatePresence>
+        ) : null}
+      </div>
+    </motion.main>
   );
 }
