@@ -4,7 +4,9 @@ const nextConfig = {
     domains: ['openweathermap.org'],
   },
   experimental: {
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000'],
+    },
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',

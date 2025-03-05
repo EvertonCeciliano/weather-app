@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -21,16 +21,11 @@ export default function Home() {
   const [forecast, setForecast] = useState<ForecastData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
 
-  const getLocation = () => {
+  const getLocation = useCallback(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          });
           fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
         },
         (error) => {
@@ -43,7 +38,7 @@ export default function Home() {
       setError('Seu navegador não suporta geolocalização. Por favor, digite o nome da sua cidade.');
       fetchWeather();
     }
-  };
+  }, []);
 
   const fetchWeatherByCoords = async (lat: number, lon: number) => {
     try {
@@ -124,7 +119,7 @@ export default function Home() {
 
   useEffect(() => {
     getLocation();
-  }, []);
+  }, [getLocation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
