@@ -1,14 +1,10 @@
-import { motion } from 'framer-motion';
-import { 
-  WiDaySunny, 
-  WiNightClear, 
-  WiCloudy, 
-  WiRain, 
-  WiSnow, 
-  WiThunderstorm,
+import { motion } from "framer-motion";
+import {
+  WiDaySunny,
+  WiNightClear,
+  WiCloudy,
+  WiRain,
   WiFog,
-  WiDust,
-  WiTornado,
   WiDayCloudy,
   WiNightAltCloudy,
   WiDayRain,
@@ -16,8 +12,8 @@ import {
   WiDaySnow,
   WiNightAltSnow,
   WiDayThunderstorm,
-  WiNightAltThunderstorm
-} from 'react-icons/wi';
+  WiNightAltThunderstorm,
+} from "react-icons/wi";
 
 interface WeatherIconProps {
   icon: string;
@@ -25,46 +21,54 @@ interface WeatherIconProps {
   className?: string;
 }
 
-export function WeatherIcon({ icon, size = 128, className = '' }: WeatherIconProps) {
+export function WeatherIcon({
+  icon,
+  size = 128,
+  className = "",
+}: WeatherIconProps) {
   const getIcon = () => {
     const hour = new Date().getHours();
     const isNight = hour >= 18 || hour < 6;
 
     switch (icon) {
-      case '01d':
+      case "01d":
         return <WiDaySunny size={size} className={className} />;
-      case '01n':
+      case "01n":
         return <WiNightClear size={size} className={className} />;
-      case '02d':
+      case "02d":
         return <WiDayCloudy size={size} className={className} />;
-      case '02n':
+      case "02n":
         return <WiNightAltCloudy size={size} className={className} />;
-      case '03d':
-      case '03n':
+      case "03d":
+      case "03n":
         return <WiCloudy size={size} className={className} />;
-      case '04d':
-      case '04n':
+      case "04d":
+      case "04n":
         return <WiCloudy size={size} className={className} />;
-      case '09d':
-      case '09n':
+      case "09d":
+      case "09n":
         return <WiRain size={size} className={className} />;
-      case '10d':
+      case "10d":
         return <WiDayRain size={size} className={className} />;
-      case '10n':
+      case "10n":
         return <WiNightAltRain size={size} className={className} />;
-      case '11d':
+      case "11d":
         return <WiDayThunderstorm size={size} className={className} />;
-      case '11n':
+      case "11n":
         return <WiNightAltThunderstorm size={size} className={className} />;
-      case '13d':
+      case "13d":
         return <WiDaySnow size={size} className={className} />;
-      case '13n':
+      case "13n":
         return <WiNightAltSnow size={size} className={className} />;
-      case '50d':
-      case '50n':
+      case "50d":
+      case "50n":
         return <WiFog size={size} className={className} />;
       default:
-        return isNight ? <WiNightClear size={size} className={className} /> : <WiDaySunny size={size} className={className} />;
+        return isNight ? (
+          <WiNightClear size={size} className={className} />
+        ) : (
+          <WiDaySunny size={size} className={className} />
+        );
     }
   };
 
@@ -78,4 +82,4 @@ export function WeatherIcon({ icon, size = 128, className = '' }: WeatherIconPro
       {getIcon()}
     </motion.div>
   );
-} 
+}
